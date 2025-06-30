@@ -79,6 +79,14 @@ export class BadgeHorizontalContainerCard extends LitElement {
       return nothing;
     }
 
+    if (this._badges.length === 0) {
+      return html`
+        <hui-warning>
+          No badges configured. Please add badges in the configuration.
+        </hui-warning>
+      `;
+    }
+
     return html`
       <div 
         class="badges${classMap({ "left-align": this._config.badges_align === 'left', "right-align": this._config.badges_align === 'right' })}"
