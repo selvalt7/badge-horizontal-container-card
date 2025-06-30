@@ -95,7 +95,7 @@ export class BadgeContainerEditor extends LitElement {
               <div class="badge-item">
                 <div class="handle">
                   <ha-svg-icon .path=${mdiDrag}></ha-svg-icon>
-                  <span>${badge.type}</span>
+                  <span>${this._getBadgeName(badge.type)}</span>
                 </div>
                 <div>
                   <ha-icon-button class="edit-badge"
@@ -133,6 +133,14 @@ export class BadgeContainerEditor extends LitElement {
         }}
       ></ha-form>
     `;
+  }
+
+  private _getBadgeName(badgeType: string): string {
+    if (badgeType == "custom:hui-entity-badge") {
+      return "Entity Badge";
+    }
+    const badge = window.customBadges?.find((b: any) => b.type === badgeType.replace("custom:", "")) as any;
+    return badge ? badge.name || badgeType : badgeType;
   }
 
   private async _handleBadgePicked(ev: CustomEvent) {
