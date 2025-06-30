@@ -11,6 +11,8 @@ import type {
 import { FrontendLocaleData } from "./translation";
 import { LocalizeFunc } from "./common/translations/localize";
 import { Themes } from "./data/ws-themes";
+import { LovelaceBadgeConfig } from "./data/lovelace";
+import { LovelaceBadge } from "./panels/lovelace/hui-badge";
 
 declare global {
   interface HASSDomEvents {
@@ -21,6 +23,16 @@ declare global {
       config: any;
     };
     change: undefined;
+    "ll-create-badge": undefined;
+    "ll-create-card": undefined;
+    "ll-edit-badge": { path: any };
+    "close-dialog": undefined;
+  }
+  interface Window {
+    customBadges: Array<Object>;
+    loadCardHelpers(): Promise<{
+      createCardElement(options: LovelaceBadgeConfig);
+    }>;
   }
 }
 
