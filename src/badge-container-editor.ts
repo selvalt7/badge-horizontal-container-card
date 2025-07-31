@@ -2,7 +2,7 @@ import { html, LitElement, nothing, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { HomeAssistant } from "./ha/types";
 import { BadgeContainerCardConfig } from "./type";
-import { mdiArrowLeft, mdiDrag, mdiPencil, mdiDelete } from "@mdi/js";
+import { mdiArrowLeft, mdiDrag, mdiPencil, mdiDelete, mdiEye } from "@mdi/js";
 import { fireEvent } from "./ha/common/dom/fire_event";
 import { LovelaceBadgeConfig } from "./ha/data/lovelace";
 import memoizeOne from "memoize-one";
@@ -70,6 +70,7 @@ export class BadgeContainerEditor extends LitElement {
               this._selectedBadgeIndex = -1;
             }}
           ></ha-icon-button>
+          ${this._selectedBadgeIndex != -1 ? this._getBadgeName(this._config.badges[this._selectedBadgeIndex].type) : ""}
         </div>
       </div>
     `;
@@ -77,6 +78,22 @@ export class BadgeContainerEditor extends LitElement {
     if (selected > -1) {
       return html`
         ${backElement}
+        <ha-expansion-panel .expanded=${false}>
+          <div
+            slot="header"
+            role="heading"
+          >
+            <ha-svg-icon .path=${mdiEye}></ha-svg-icon>
+            ${this.hass.localize(`ui.panel.lovelace.editor.edit_card.tab_visibility`)}
+          </div>
+          <div>
+            <hui-card-visibility-editor
+              .hass=${this.hass}
+              .config=${this._config.badges[selected]}
+              @value-changed=${this._handleBadgeVisibilityChanged}
+            ></hui-card-visibility-editor>
+          </div>
+        </ha-expansion-panel>
         <hui-card-element-editor
           .hass=${this.hass}
           .value=${this._config.badges[selected]}
@@ -171,6 +188,18 @@ export class BadgeContainerEditor extends LitElement {
     return await badgeClass.getStubConfig(this.hass, this.hass.entities, this.hass.entities);
   }
 
+  private _handleBadgeVisibilityChanged(ev: CustomEvent) {
+    ev.stopPropagation();
+    if (!this._config) {
+      return;
+    }
+    const badges = [...this._config.badges];
+    const newBadge = ev.detail.value as LovelaceBadgeConfig;
+    badges[this._selectedBadgeIndex] = newBadge;
+    this._config = { ...this._config, badges };
+    fireEvent(this, "config-changed", { config: this._config });
+  }
+
   private _handleConfigChanged(ev: CustomEvent) {
     ev.stopPropagation();
     if (!this._config) {
@@ -258,6 +287,19 @@ export class BadgeContainerEditor extends LitElement {
       }
 
       ha-form:nth-of-type(2) {
+        margin-top: 16px;
+      }
+      
+      ha-svg-icon {
+        color: var(--secondary-text-color);
+      }
+
+      ha-expansion-panel {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--divider-color);
+      }
+
+      hui-card-element-editor {
         margin-top: 16px;
       }
     `;
