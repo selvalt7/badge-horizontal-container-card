@@ -296,7 +296,7 @@ export class BadgeContainerEditor extends LitElement {
 
       ha-expansion-panel {
         padding: 12px 0;
-        border-bottom: 1px solid var(--divider-color);
+        border-bottom: 2px solid var(--divider-color);
       }
 
       hui-card-element-editor {
