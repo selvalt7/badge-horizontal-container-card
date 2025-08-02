@@ -139,7 +139,10 @@ export class BadgeContainerEditor extends LitElement {
               <div class="badge-item">
                 <div class="handle">
                   <ha-svg-icon .path=${mdiDrag}></ha-svg-icon>
-                  <span>${this._getBadgeName(badge.type)}</span>
+                  <div>
+                    <span>${this._getBadgeName(badge.type)}</span>
+                    <span class="secondary">${this._getEntityName(badge)}</span>
+                  </div>
                 </div>
                 <div>
                   <ha-icon-button class="edit-badge"
@@ -180,11 +183,22 @@ export class BadgeContainerEditor extends LitElement {
   }
 
   private _getBadgeName(badgeType: string): string {
-    if (badgeType == "custom:hui-entity-badge") {
+    if (badgeType == "custom:hui-entity-badge" || badgeType == "entity") {
       return "Entity Badge";
     }
     const badge = window.customBadges?.find((b: any) => b.type === badgeType.replace("custom:", "")) as any;
     return badge ? badge.name || badgeType : badgeType;
+  }
+
+  private _getEntityName(badgeConfig: LovelaceBadgeConfig): string {
+    if (!badgeConfig.entity) {
+      return "";
+    }
+    const entity = this.hass.states[badgeConfig.entity];
+    if (!entity) {
+      return badgeConfig.entity;
+    }
+    return entity.attributes.friendly_name || entity.entity_id;
   }
 
   private async _handleBadgePicked(ev: CustomEvent) {
@@ -242,6 +256,7 @@ export class BadgeContainerEditor extends LitElement {
     const newBadge = ev.detail.config as LovelaceBadgeConfig;
     badges[this._selectedBadgeIndex] = newBadge;
     this._config = { ...this._config, badges };
+    this._guiModeAvailable = ev.detail.guiModeAvailable;
     fireEvent(this, "config-changed", { config: this._config });
   }
 
@@ -269,6 +284,8 @@ export class BadgeContainerEditor extends LitElement {
   private editBadge(ev: CustomEvent) {
     const index = (ev.currentTarget as any).index ?? -1;
     this._selectedBadgeIndex = index;
+    this._GUImode = true;
+    this._guiModeAvailable = true;
   }
 
   private _deleteBadge(ev: CustomEvent) {
@@ -307,6 +324,19 @@ export class BadgeContainerEditor extends LitElement {
         padding-inline-end: 8px;
         align-self: flex-start;
         margin: 16px 0;
+        display: flex;
+        align-items: center;
+      }
+
+      .handle div {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .secondary {
+        color: var(--secondary-text-color);
+        font-size: 12px;
       }
 
       .badge-item {
