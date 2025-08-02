@@ -101,6 +101,11 @@ export class BadgeContainerEditor extends LitElement {
     `;
 
     if (selected > -1) {
+      let badgeConfig = this._config.badges[selected];
+      if (badgeConfig.type === "entity") {
+        // hui-card-element-editor gets confused when type is "entity" because there is a card with that type so we need to change it to the custom entity badge type
+        badgeConfig = { ...badgeConfig, type: "custom:hui-entity-badge" };
+      }
       return html`
         ${backElement}
         ${isGuiMode ? html`
@@ -115,7 +120,7 @@ export class BadgeContainerEditor extends LitElement {
           <div>
             <hui-card-visibility-editor
               .hass=${this.hass}
-              .config=${this._config.badges[selected]}
+              .config=${badgeConfig}
               @value-changed=${this._handleBadgeVisibilityChanged}
             ></hui-card-visibility-editor>
           </div>
@@ -123,7 +128,7 @@ export class BadgeContainerEditor extends LitElement {
         ` : nothing}
         <hui-card-element-editor
           .hass=${this.hass}
-          .value=${this._config.badges[selected]}
+          .value=${badgeConfig}
           .lovelace=${this.lovelace}
           @config-changed=${this._handleConfigChanged}
           @GUImode-changed=${this._handleGUIModeChanged}
