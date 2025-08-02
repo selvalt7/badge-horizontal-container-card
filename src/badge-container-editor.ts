@@ -1,8 +1,8 @@
 import { html, LitElement, nothing, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, state, query } from "lit/decorators.js";
 import { HomeAssistant } from "./ha/types";
 import { BadgeContainerCardConfig } from "./type";
-import { mdiArrowLeft, mdiDrag, mdiPencil, mdiDelete, mdiEye } from "@mdi/js";
+import { mdiArrowLeft, mdiDrag, mdiPencil, mdiDelete, mdiEye, mdiCodeBraces, mdiListBoxOutline } from "@mdi/js";
 import { fireEvent } from "./ha/common/dom/fire_event";
 import { LovelaceBadgeConfig } from "./ha/data/lovelace";
 import memoizeOne from "memoize-one";
@@ -26,10 +26,21 @@ const SCHEMA = [
 @customElement("badge-horizontal-container-card-editor")
 export class BadgeContainerEditor extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
+
   @property({ attribute: false }) public lovelace!: any;
+
   @property({ type: Number }) public index = 0;
+
   @state() private _config?: BadgeContainerCardConfig;
+
   @state() private _selectedBadgeIndex: number = -1;
+
+  @state() protected _GUImode = true;
+
+  @state() protected _guiModeAvailable? = true;
+
+  @query("hui-card-element-editor")
+  protected _cardEditorEl?: LitElement;
 
   setConfig(config: BadgeContainerCardConfig): void {
     this._config = config;
@@ -58,8 +69,10 @@ export class BadgeContainerEditor extends LitElement {
     if (!this.hass || !this._config) {
       return nothing;
     }
-    fireEvent(this, "close-dialog");
+
     const selected = this._selectedBadgeIndex ?? -1;
+
+    const isGuiMode = !this._cardEditorEl || this._GUImode;
 
     const backElement = html`
       <div class="header">
@@ -68,16 +81,29 @@ export class BadgeContainerEditor extends LitElement {
             .path=${mdiArrowLeft}
             @click=${() => {
               this._selectedBadgeIndex = -1;
+              this._GUImode = true;
             }}
           ></ha-icon-button>
           ${this._selectedBadgeIndex != -1 ? this._getBadgeName(this._config.badges[this._selectedBadgeIndex].type) : ""}
         </div>
+        <ha-icon-button
+          class="gui-mode-button"
+          @click=${this._toggleMode}
+          .disabled=${!this._guiModeAvailable}
+          .label=${this.hass!.localize(
+            isGuiMode
+              ? "ui.panel.lovelace.editor.edit_card.show_code_editor"
+              : "ui.panel.lovelace.editor.edit_card.show_visual_editor"
+          )}
+          .path=${isGuiMode ? mdiCodeBraces : mdiListBoxOutline}
+        ></ha-icon-button>
       </div>
     `;
 
     if (selected > -1) {
       return html`
         ${backElement}
+        ${isGuiMode ? html`
         <ha-expansion-panel .expanded=${false}>
           <div
             slot="header"
@@ -94,6 +120,7 @@ export class BadgeContainerEditor extends LitElement {
             ></hui-card-visibility-editor>
           </div>
         </ha-expansion-panel>
+        ` : nothing}
         <hui-card-element-editor
           .hass=${this.hass}
           .value=${this._config.badges[selected]}
@@ -183,6 +210,10 @@ export class BadgeContainerEditor extends LitElement {
     fireEvent(this, "config-changed", { config: this._config });
   }
 
+  private _toggleMode() {
+    (this._cardEditorEl as any).toggleMode();
+  }
+
   private async _getBadgeStubConfig(badgeType: string): Promise<LovelaceBadgeConfig> {
     const badgeClass = customElements.get(badgeType.replace("custom:", "")) as any;
     return await badgeClass.getStubConfig(this.hass, this.hass.entities, this.hass.entities);
@@ -198,6 +229,8 @@ export class BadgeContainerEditor extends LitElement {
     badges[this._selectedBadgeIndex] = newBadge;
     this._config = { ...this._config, badges };
     fireEvent(this, "config-changed", { config: this._config });
+
+    this._cardEditorEl?.requestUpdate();
   }
 
   private _handleConfigChanged(ev: CustomEvent) {
@@ -214,6 +247,8 @@ export class BadgeContainerEditor extends LitElement {
 
   private _handleGUIModeChanged(ev: CustomEvent) {
     ev.stopPropagation();
+    this._GUImode = ev.detail.guiMode;
+    this._guiModeAvailable = ev.detail.guiModeAvailable;
   }
 
   private _handleBadgeMoved(ev: CustomEvent) {
