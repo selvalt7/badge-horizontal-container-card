@@ -44,6 +44,7 @@ https://github.com/selvalt7/badge-horizontal-container-card
 |------|:----:|:-------:|:------------|
 | type | `string` | 'custom:badge-horizontal-container-card' |
 | badges | `array` | Required | Badges config array
-| badges_align | `left`, `center`, `right` | Optional | Badges alignment
+| badges_align | `left`, `center`, `right` | `center` | Badges alignment
+| badges_wrap | `wrap`, `scroll` | `wrap` | Badges overflow behaviour
 
 ![editor](https://github.com/user-attachments/assets/2eec5f5e-84f9-4d64-beb8-5008380ce012)

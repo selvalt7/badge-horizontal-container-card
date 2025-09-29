@@ -21,6 +21,19 @@ const SCHEMA = [
       },
     },
   },
+  {
+    name: "badges_wrap",
+    label: "Badges wrapping",
+    selector: { 
+      select: {
+        options: [
+          { value: "wrap", label: "Wrap", image: { src: "/static/images/form/view_header_badges_wrap_wrap.svg", src_dark: "/static/images/form/view_header_badges_wrap_wrap_dark.svg" } },
+          { value: "scroll", label: "Scroll", image: { src: "/static/images/form/view_header_badges_wrap_scroll.svg", src_dark: "/static/images/form/view_header_badges_wrap_scroll_dark.svg" } }
+        ],
+        mode: "box"
+      }
+    }
+  }
 ]
 
 @customElement("badge-horizontal-container-card-editor")
@@ -137,6 +150,14 @@ export class BadgeContainerEditor extends LitElement {
     }
 
     return html`
+      <ha-form
+        .hass=${this.hass}
+        .schema=${SCHEMA}
+        .data=${this._config}
+        .computeLabel=${(schema) => schema.label}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+      <span class="label">Badges</span>
       <ha-sortable handle-selector=".handle" @item-moved=${this._handleBadgeMoved}>
         <div class="badges">
           ${this._config.badges.map(
@@ -172,17 +193,6 @@ export class BadgeContainerEditor extends LitElement {
         .data=${{ new_badge: "" }}
         .computeLabel=${() => this.hass.localize("ui.panel.lovelace.editor.section.add_badge")}
         @value-changed=${this._handleBadgePicked}
-      ></ha-form>
-      <ha-form
-        .hass=${this.hass}
-        .schema=${SCHEMA}
-        .data=${this._config}
-        .computeLabel=${(schema) => schema.label}
-        @value-changed=${(ev: CustomEvent) => {
-          ev.stopPropagation();
-          this._config = { ...this._config, ...ev.detail.value };
-          fireEvent(this, "config-changed", { config: this._config });
-        }}
       ></ha-form>
     `;
   }
@@ -305,6 +315,12 @@ export class BadgeContainerEditor extends LitElement {
     fireEvent(this, "config-changed", { config: this._config });
   }
 
+  private _valueChanged(ev: CustomEvent) {
+    ev.stopPropagation();
+    this._config = { ...this._config, ...ev.detail.value };
+    fireEvent(this, "config-changed", { config: this._config });
+  }
+
   static get styles() {
     return css`
       :host {
@@ -354,6 +370,10 @@ export class BadgeContainerEditor extends LitElement {
       .edit-badge, .delete-badge {
         align-self: flex-start;
         margin: 4px 0px;
+      }
+
+      .label {
+        margin-top: 24px;
       }
 
       ha-form:nth-of-type(2) {

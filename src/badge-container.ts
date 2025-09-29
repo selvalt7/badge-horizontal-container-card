@@ -1,4 +1,4 @@
-import { html, LitElement, css, TemplateResult, nothing } from 'lit';
+import { html, LitElement, css, TemplateResult, nothing, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { registerCustomCard } from './utils/custom-cards';
 import { HomeAssistant } from './ha/types';
@@ -8,6 +8,7 @@ import { LovelaceBadge } from './ha/panels/lovelace/hui-badge';
 import { styleMap } from 'lit/directives/style-map.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { fireEvent } from './ha/common/dom/fire_event';
+import { DragScrollController } from './ha/common/controllers/drag-scroll-controller';
 
 registerCustomCard({
   type: 'badge-horizontal-container-card',
@@ -21,9 +22,16 @@ export class BadgeHorizontalContainerCard extends LitElement {
   
   @property({ type: Boolean }) public preview = false;
 
+  @property({ attribute: false }) public lovelace!: any;
+
   @state() private _config?: BadgeContainerCardConfig;
 
   @state() private _badges?: LovelaceBadge[];
+
+  private _dragScrollController = new DragScrollController(this, {
+    selector: ".scroll",
+    enabled: false,
+  });
 
   public static async getStubConfig(): Promise<BadgeContainerCardConfig> {
     return {
@@ -50,6 +58,10 @@ export class BadgeHorizontalContainerCard extends LitElement {
 
   protected update(changedProperties) {
     super.update(changedProperties);
+
+    if (changedProperties.has("config") || changedProperties.has("preview")) {
+      this._dragScrollController.enabled = !this.preview && this._config?.badges_wrap === "scroll";
+    }
 
     if (this._badges) {
       if (changedProperties.has("hass")) {
@@ -86,10 +98,11 @@ export class BadgeHorizontalContainerCard extends LitElement {
         </hui-warning>
       `;
     }
+    const scrolling = this._dragScrollController.scrolling;
 
     return html`
       <div 
-        class="badges${classMap({ "left-align": this._config.badges_align === 'left', "right-align": this._config.badges_align === 'right' })}"
+        class="badges${classMap({ "left-align": this._config.badges_align === 'left', "right-align": this._config.badges_align === 'right', "scroll": this._config?.badges_wrap === "scroll", "scrolling": scrolling })}"
       >
         ${this._badges}
       </div>
@@ -125,6 +138,28 @@ export class BadgeHorizontalContainerCard extends LitElement {
       margin: 0;
     }
 
+    .badges > * {
+      min-width: fit-content;
+    }
+
+    .badges.scroll {
+      overflow: auto;
+      max-width: 100%;
+      scrollbar-color: var(--scrollbar-thumb-color) transparent;
+      scrollbar-width: none;
+      mask-image: linear-gradient(90deg, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%);
+      flex-wrap: nowrap;
+    }
+
+    .badges.scroll:not(.nostart)::before, .badges.scroll::after {
+      content: "";
+      position: relative;
+      display: block;
+      min-width: 0;
+      height: 16px;
+      background-color: transparent;
+    }
+
     .left-align {
       justify-content: flex-start;
     }
@@ -135,6 +170,10 @@ export class BadgeHorizontalContainerCard extends LitElement {
 
     .no-wrap {
       flex-wrap: nowrap;
+    }
+
+    .scrolling {
+      pointer-events: none;
     }
 
     `
