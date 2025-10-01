@@ -102,7 +102,7 @@ export class BadgeHorizontalContainerCard extends LitElement {
 
     return html`
       <div 
-        class="badges${classMap({ "left-align": this._config.badges_align === 'left', "right-align": this._config.badges_align === 'right', "scroll": this._config?.badges_wrap === "scroll", "scrolling": scrolling })}"
+        class="badges${classMap({ "left-align": this._config.badges_align === 'left', "right-align": this._config.badges_align === 'right', "scroll": this._config?.badges_wrap === "scroll" && !this.preview, "scrolling": scrolling })}"
       >
         ${this._badges}
       </div>
