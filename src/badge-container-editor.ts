@@ -131,11 +131,16 @@ export class BadgeContainerEditor extends LitElement {
             ${this.hass.localize(`ui.panel.lovelace.editor.edit_card.tab_visibility`)}
           </div>
           <div>
-            <hui-card-visibility-editor
+            <p class="intro">
+              ${this.hass.localize(
+                `ui.panel.lovelace.editor.edit_badge.visibility.explanation`
+              )}
+            </p>
+            <ha-card-conditions-editor
               .hass=${this.hass}
-              .config=${badgeConfig}
+              .conditions=${badgeConfig.visibility ?? []}
               @value-changed=${this._handleBadgeVisibilityChanged}
-            ></hui-card-visibility-editor>
+            ></ha-card-conditions-editor>
           </div>
         </ha-expansion-panel>
         ` : nothing}
@@ -353,6 +358,12 @@ export class BadgeContainerEditor extends LitElement {
         display: flex;
         flex-direction: column;
         justify-content: center;
+      }
+
+      .intro {
+        margin: 0;
+        color: var(--secondary-text-color);
+        margin-bottom: 8px;
       }
 
       .secondary {
