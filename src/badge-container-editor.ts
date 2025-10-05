@@ -259,7 +259,11 @@ export class BadgeContainerEditor extends LitElement {
       return;
     }
     const badges = [...this._config.badges];
-    const newBadge = ev.detail.value as LovelaceBadgeConfig;
+    const conditions = ev.detail.value;
+    const newBadge = { ...badges[this._selectedBadgeIndex], visibility: conditions };
+    if (newBadge.visibility?.length === 0) {
+      delete newBadge.visibility;
+    }
     badges[this._selectedBadgeIndex] = newBadge;
     this._config = { ...this._config, badges };
     fireEvent(this, "config-changed", { config: this._config });
