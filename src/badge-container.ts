@@ -149,6 +149,7 @@ export class BadgeHorizontalContainerCard extends LitElement {
       scrollbar-width: none;
       mask-image: linear-gradient(90deg, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%);
       flex-wrap: nowrap;
+      padding: 2px 0;
     }
 
     .badges.scroll:not(.nostart)::before, .badges.scroll::after {
