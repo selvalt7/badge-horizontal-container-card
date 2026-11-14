@@ -9,6 +9,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { fireEvent } from './ha/common/dom/fire_event';
 import { DragScrollController } from './ha/common/controllers/drag-scroll-controller';
+import { ScrollFadeController, scrollFadeStyles } from './ha/common/controllers/scroll-fade-controller';
 
 registerCustomCard({
   type: 'badge-horizontal-container-card',
@@ -32,6 +33,8 @@ export class BadgeHorizontalContainerCard extends LitElement {
     selector: ".scroll",
     enabled: false,
   });
+
+  private _scrollFadeController = new ScrollFadeController(this);
 
   public static async getStubConfig(): Promise<BadgeContainerCardConfig> {
     return {
@@ -98,18 +101,29 @@ export class BadgeHorizontalContainerCard extends LitElement {
         </hui-warning>
       `;
     }
+
     const scrolling = this._dragScrollController.scrolling;
+    const badgesScrollable = this._config?.badges_wrap === "scroll" && !this.preview;
 
     return html`
       <div 
-        class="badges${classMap({ "left-align": this._config.badges_align === 'left', "right-align": this._config.badges_align === 'right', "scroll": this._config?.badges_wrap === "scroll" && !this.preview, "scrolling": scrolling })}"
+        class="badges${classMap({ "left-align": this._config.badges_align === 'left',
+          "right-align": this._config.badges_align === 'right',
+          "scroll": badgesScrollable,
+          "scroll-fade-start":
+            badgesScrollable && this._scrollFadeController.start,
+          "scroll-fade-end":
+            badgesScrollable && this._scrollFadeController.end,
+          "scrolling": scrolling
+        })}"
+        ${this._scrollFadeController.target()}
       >
         ${this._badges}
       </div>
     `;
   }
 
-    public getGridOptions(): LovelaceGridOptions {
+  public getGridOptions(): LovelaceGridOptions {
     return {
       columns: 'full',
       rows: 'auto',
@@ -129,6 +143,8 @@ export class BadgeHorizontalContainerCard extends LitElement {
 
   static get styles() {
     return css`
+    ${scrollFadeStyles}
+    
     .badges {
       display: flex;
       align-items: flex-start;
@@ -147,19 +163,10 @@ export class BadgeHorizontalContainerCard extends LitElement {
       max-width: 100%;
       scrollbar-color: var(--scrollbar-thumb-color) transparent;
       scrollbar-width: none;
-      mask-image: linear-gradient(90deg, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%);
       flex-wrap: nowrap;
       padding: 2px 0;
     }
 
-    .badges.scroll:not(.nostart)::before, .badges.scroll::after {
-      content: "";
-      position: relative;
-      display: block;
-      min-width: 0;
-      height: 16px;
-      background-color: transparent;
-    }
 
     .left-align {
       justify-content: flex-start;
