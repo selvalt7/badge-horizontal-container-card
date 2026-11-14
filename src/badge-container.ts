@@ -95,6 +95,22 @@ export class BadgeHorizontalContainerCard extends LitElement {
     }
 
     if (this._badges.length === 0) {
+      if (this._config.hide_empty) {
+        if (this.preview) {
+          return html`
+          <div class="badges left-align">
+            ${Array.from({ length: 3 }).map(() => html`
+              <ha-badge>
+                <div class="placeholder-badge-icon" slot="icon"></div>
+                <div class="placeholder-badge-content"></div>
+              </ha-badge>
+              `)
+            }
+          </div>
+          `
+        }
+        return nothing;
+      }
       return html`
         <hui-warning>
           No badges configured. Please add badges in the configuration.
@@ -182,6 +198,26 @@ export class BadgeHorizontalContainerCard extends LitElement {
 
     .scrolling {
       pointer-events: none;
+    }
+
+    .placeholder-badge-icon {
+      width: 24px;
+      height: 24px;
+      margin-left: -4px;
+      margin-right: 0;
+      margin-inline-start: -4px;
+      margin-inline-end: 0;
+      pointer-events: none;
+      background-color: var(--secondary-background-color);
+      border-radius: 50%;
+    }
+
+    .placeholder-badge-content {
+      pointer-events: none;
+      background-color: var(--secondary-background-color);
+      border-radius: 4px;
+      width: 40px;
+      height: 12px;
     }
 
     `

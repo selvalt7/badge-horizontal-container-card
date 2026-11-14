@@ -10,17 +10,28 @@ import memoizeOne from "memoize-one";
 
 const SCHEMA = [
   {
-    name: "badges_align",
-    label: "Badges Alignment",
-    selector: {
-      select: {
-        options: [
-          { value: "left", label: "Left" },
-          { value: "center", label: "Center" },
-          { value: "right", label: "Right" },
-        ],
+    name: "",
+    type: "grid",
+    schema: [
+      {
+        name: "badges_align",
+        label: "Badges Alignment",
+        selector: {
+          select: {
+            options: [
+              { value: "left", label: "Left" },
+              { value: "center", label: "Center" },
+              { value: "right", label: "Right" },
+            ],
+          },
+        },
       },
-    },
+      {
+        name: "hide_empty",
+        label: "Hide card when no badges are configured",
+        selector: { boolean: {} },
+      }
+    ]
   },
   {
     name: "badges_wrap",

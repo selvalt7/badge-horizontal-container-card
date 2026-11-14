@@ -4,4 +4,5 @@ export interface BadgeContainerCardConfig extends LovelaceCardConfig {
   badges: LovelaceBadgeConfig[];
   badges_align?: 'left' | 'center' | 'right';
   badges_wrap?: "wrap" | "scroll";
+  hide_empty?: boolean;
 }
