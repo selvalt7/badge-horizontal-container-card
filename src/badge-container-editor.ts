@@ -5,6 +5,7 @@ import { BadgeContainerCardConfig } from "./type";
 import { mdiArrowLeft, mdiDrag, mdiPencil, mdiDelete, mdiEye, mdiCodeBraces, mdiListBoxOutline } from "@mdi/js";
 import { fireEvent } from "./ha/common/dom/fire_event";
 import { LovelaceBadgeConfig } from "./ha/data/lovelace";
+import { LovelaceBadge } from "./ha/panels/lovelace/hui-badge";
 import memoizeOne from "memoize-one";
 
 const SCHEMA = [
@@ -36,6 +37,27 @@ const SCHEMA = [
   }
 ]
 
+function isHomeAssistantVersionAtLeast(
+  version: string | undefined,
+  minimumVersion: string
+): boolean {
+  const current = version?.match(/^(\d+)\.(\d+)/);
+  const minimum = minimumVersion.match(/^(\d+)\.(\d+)/);
+  if (!current || !minimum) {
+    return false;
+  }
+
+  const currentMajor = Number(current[1]);
+  const currentMinor = Number(current[2]);
+  const minimumMajor = Number(minimum[1]);
+  const minimumMinor = Number(minimum[2]);
+
+  return (
+    currentMajor > minimumMajor ||
+    (currentMajor === minimumMajor && currentMinor >= minimumMinor)
+  );
+}
+
 @customElement("badge-horizontal-container-card-editor")
 export class BadgeContainerEditor extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -60,13 +82,20 @@ export class BadgeContainerEditor extends LitElement {
   }
 
   private _schema = memoizeOne(
-    () => 
+    (version: string) =>
     [
       {
         name: "new_badge",
         selector: { select: {
           options: [
             { value: "custom:hui-entity-badge", label: "Entity" },
+            { value: "entity-filter", label: "Entity filter" },
+            ...(isHomeAssistantVersionAtLeast(version, "2026.5")
+              ? [{ value: "shortcut", label: "Shortcut" }]
+              : []),
+            ...(isHomeAssistantVersionAtLeast(version, "2026.11")
+              ? [{ value: "alert", label: "Alert" }]
+              : []),
             ...window.customBadges?.map((badge: any) => ({
               value: `custom:${badge.type}`,
               label: badge.name || badge.type
@@ -115,7 +144,12 @@ export class BadgeContainerEditor extends LitElement {
 
     if (selected > -1) {
       let badgeConfig = this._config.badges[selected];
-      if (badgeConfig.type === "entity") {
+      if (["alert", "entity-filter", "shortcut"].includes(badgeConfig.type)) {
+        badgeConfig = {
+          ...badgeConfig,
+          type: `custom:hui-${badgeConfig.type}-badge`,
+        };
+      } else if (badgeConfig.type === "entity") {
         // hui-card-element-editor gets confused when type is "entity" because there is a card with that type so we need to change it to the custom entity badge type
         badgeConfig = { ...badgeConfig, type: "custom:hui-entity-badge" };
       }
@@ -194,7 +228,7 @@ export class BadgeContainerEditor extends LitElement {
       </ha-sortable>
       <ha-form
         .hass=${this.hass}
-        .schema=${this._schema()}
+        .schema=${this._schema(this.hass.config.version)}
         .data=${{ new_badge: "" }}
         .computeLabel=${() => this.hass.localize("ui.panel.lovelace.editor.section.add_badge")}
         @value-changed=${this._handleBadgePicked}
@@ -203,8 +237,18 @@ export class BadgeContainerEditor extends LitElement {
   }
 
   private _getBadgeName(badgeType: string): string {
-    if (badgeType == "custom:hui-entity-badge" || badgeType == "entity") {
-      return "Entity Badge";
+    const builtInNames: Record<string, string> = {
+      "custom:hui-entity-badge": "Entity Badge",
+      "custom:hui-entity-filter-badge": "Entity filter badge",
+      "custom:hui-shortcut-badge": "Shortcut badge",
+      "custom:hui-alert-badge": "Alert badge",
+      entity: "Entity Badge",
+      "entity-filter": "Entity filter badge",
+      shortcut: "Shortcut badge",
+      alert: "Alert badge",
+    };
+    if (builtInNames[badgeType]) {
+      return builtInNames[badgeType];
     }
     const badge = window.customBadges?.find((b: any) => b.type === badgeType.replace("custom:", "")) as any;
     return badge ? badge.name || badgeType : badgeType;
@@ -234,7 +278,9 @@ export class BadgeContainerEditor extends LitElement {
     }
 
     const badgeConfig = await this._getBadgeStubConfig(badgeType);
-    badgeConfig.type = badgeType;
+    if (badgeType.startsWith("custom:")) {
+      badgeConfig.type = badgeType;
+    }
 
     const badges = [...this._config.badges, badgeConfig];
     this._config = {
@@ -249,8 +295,57 @@ export class BadgeContainerEditor extends LitElement {
   }
 
   private async _getBadgeStubConfig(badgeType: string): Promise<LovelaceBadgeConfig> {
+    if (badgeType === "entity-filter") {
+      const entity = Object.keys(this.hass.states)[0];
+      const config: LovelaceBadgeConfig = {
+        type: badgeType,
+        entities: [entity || "sensor.badge_preload"],
+        conditions: [],
+      };
+      await this._preloadBadge(badgeType, config);
+      return config;
+    }
+
+    if (badgeType === "shortcut") {
+      const config: LovelaceBadgeConfig = {
+        type: badgeType,
+        tap_action: {
+          action: "navigate",
+          navigation_path: "/home",
+        },
+      };
+      await this._preloadBadge(badgeType, config);
+      const badgeClass = customElements.get(`hui-${badgeType}-badge`) as any;
+      return await badgeClass.getStubConfig();
+    }
+
+    if (badgeType === "alert") {
+      const alertDomains = ["alarm_control_panel", "binary_sensor", "cover", "lock"];
+      const entity = Object.keys(this.hass.states).find((entityId) =>
+        alertDomains.includes(entityId.split(".", 1)[0])
+      );
+      const config: LovelaceBadgeConfig = {
+        type: badgeType,
+        entity: entity || "binary_sensor.badge_preload",
+      };
+      await this._preloadBadge(badgeType, config);
+      const badgeClass = customElements.get(`hui-${badgeType}-badge`) as any;
+      return await badgeClass.getStubConfig(this.hass, this.hass.entities, this.hass.entities);
+    }
+
     const badgeClass = customElements.get(badgeType.replace("custom:", "")) as any;
     return await badgeClass.getStubConfig(this.hass, this.hass.entities, this.hass.entities);
+  }
+
+  private async _preloadBadge(
+    badgeType: string,
+    config: LovelaceBadgeConfig
+  ): Promise<void> {
+    const badge = document.createElement("hui-badge") as LovelaceBadge;
+    badge.hass = this.hass;
+    badge.config = config;
+    badge.load();
+    await customElements.whenDefined(`hui-${badgeType}-badge`);
   }
 
   private _handleBadgeVisibilityChanged(ev: CustomEvent) {
@@ -277,7 +372,11 @@ export class BadgeContainerEditor extends LitElement {
       return;
     }
     const badges = [...this._config.badges];
-    const newBadge = ev.detail.config as LovelaceBadgeConfig;
+    const newBadge = { ...ev.detail.config } as LovelaceBadgeConfig;
+    const badgeType = this._config.badges[this._selectedBadgeIndex].type;
+    if (["alert", "entity-filter", "shortcut"].includes(badgeType)) {
+      newBadge.type = badgeType;
+    }
     badges[this._selectedBadgeIndex] = newBadge;
     this._config = { ...this._config, badges };
     this._guiModeAvailable = ev.detail.guiModeAvailable;
